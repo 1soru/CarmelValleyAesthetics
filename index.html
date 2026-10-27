@@ -267,6 +267,13 @@
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
   }
   .chat-panel.open { display: flex; }
+  .chat-panel.full { inset: 0; width: auto; height: auto; border-radius: 0; border: 0; }
+  .chat-panel.full .chat-msgs,
+  .chat-panel.full .chat-form,
+  .chat-panel.full .chat-head {
+    padding-left: max(16px, calc((100% - 760px) / 2));
+    padding-right: max(16px, calc((100% - 760px) / 2));
+  }
   .chat-head {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     padding: 14px 16px; border-bottom: 1px solid var(--line);
@@ -274,15 +281,21 @@
   .chat-head b { font-size: 0.9rem; font-weight: 800; }
   .chat-head small { display: block; color: var(--muted); font-size: 0.7rem; margin-top: 2px; }
   .chat-head small b { font-size: 0.7rem; color: var(--text); }
+  .chat-ttl-note { display: flex !important; align-items: center; gap: 4px; color: var(--gold) !important; }
+  .chat-ttl-note svg { width: 11px; height: 11px; }
   .chat-link { background: none; border: 0; color: var(--gold); font: inherit; font-size: 0.7rem; cursor: pointer; padding: 0; }
-  .chat-x { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 4px; display: grid; }
+  .chat-btns { display: flex; gap: 4px; flex-shrink: 0; }
+  .chat-x { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 5px; display: grid; border-radius: 6px; }
+  .chat-x:hover { color: var(--text); background: var(--card2); }
   .chat-x svg { width: 18px; height: 18px; }
   .chat-msgs { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
   .chat-note { color: var(--muted); font-size: 0.78rem; text-align: center; margin: auto 0; line-height: 1.5; padding: 0 10px; }
-  .msg { max-width: 82%; align-self: flex-start; }
+  .msg { max-width: 82%; align-self: flex-start; transition: opacity 0.8s; }
   .msg.me { align-self: flex-end; text-align: right; }
+  .msg.fading { opacity: 0.3; }
   .msg .meta { font-size: 0.65rem; color: var(--muted); margin-bottom: 3px; }
   .msg .meta b { color: var(--text); font-weight: 700; margin-right: 6px; }
+  .msg .ttl { font-variant-numeric: tabular-nums; }
   .msg .bub {
     display: inline-block; text-align: left; background: var(--card2); border: 1px solid var(--line);
     padding: 8px 11px; border-radius: 12px; font-size: 0.85rem; line-height: 1.4;
@@ -302,6 +315,7 @@
   .chat-form button:disabled, .chat-form input:disabled { opacity: 0.5; cursor: default; }
   @media (max-width: 600px) {
     .chat-panel { inset: 0; width: auto; height: auto; border-radius: 0; border: 0; }
+    #chatFull { display: none; }
   }
 
   /* ---------- Lock screen ---------- */
@@ -456,10 +470,17 @@
     <div>
       <b>Members Chat</b>
       <small id="chatWho"></small>
+      <small class="chat-ttl-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
+        <span id="chatTtlNote"></span>
+      </small>
     </div>
-    <button class="chat-x" id="chatClose" type="button" aria-label="Close chat">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>
+    <div class="chat-btns">
+      <button class="chat-x" id="chatFull" type="button" aria-label="Full screen" title="Full screen"></button>
+      <button class="chat-x" id="chatClose" type="button" aria-label="Close chat" title="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
   </div>
   <div class="chat-msgs" id="chatMsgs"><div class="chat-note" id="chatNote">Loading chat...</div></div>
   <form class="chat-form" id="chatForm" autocomplete="off">
@@ -487,7 +508,7 @@ const SITE = {
 };
 
 // Encrypted rankings and news. Only the right password can unlock this.
-const ENC = "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";
+const ENC = "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";
 
 /* ============================================================
    Lock screen
@@ -717,14 +738,19 @@ function render(DATA) {
 
 /* ============================================================
    Members chat. Messages are encrypted with the site password
-   before they leave the browser, so the database only ever
-   stores scrambled text.
+   before they leave the browser, and each one deletes itself
+   CHAT_TTL after it was sent.
    ============================================================ */
+
+// How long a message lasts. If you change this, change the 60000 in the database rules too.
+const CHAT_TTL = window.__chatTTL || 60 * 1000;
 
 const CHAT_NAME_KEY = "cvar-chat-name";
 const CHAT_ID_KEY = "cvar-chat-id";
+const CHAT_FULL_KEY = "cvar-chat-full";
 let chatKey = null, chatBackend = null, chatName = null, chatReady = false, chatLoaded = false, lastSend = 0;
 const seenMsgs = new Set();
+const liveMsgs = new Map(); // id -> { el, t, ttlEl }
 
 let myId = null;
 try { myId = localStorage.getItem(CHAT_ID_KEY); } catch (e) {}
@@ -765,26 +791,54 @@ async function firebaseBackend(cfg) {
   const fbDb = await import(`https://www.gstatic.com/firebasejs/${V}/firebase-database.js`);
   const db = fbDb.getDatabase(fbApp.initializeApp(cfg));
   const msgs = fbDb.ref(db, "messages");
+  let offset = 0; // difference between this device's clock and Firebase's clock
+  fbDb.onValue(fbDb.ref(db, ".info/serverTimeOffset"), s => { offset = s.val() || 0; });
   return {
+    now: () => Date.now() + offset,
     send: c => fbDb.push(msgs, { c, t: fbDb.serverTimestamp() }),
-    subscribe: cb => fbDb.onChildAdded(
-      fbDb.query(msgs, fbDb.orderByChild("t"), fbDb.limitToLast(200)),
-      snap => { const v = snap.val() || {}; cb(snap.key, v.c, v.t); }
-    )
+    remove: id => fbDb.remove(fbDb.child(msgs, id)),
+    subscribe: (onAdd, onRemove) => {
+      const q = fbDb.query(msgs, fbDb.orderByChild("t"), fbDb.limitToLast(200));
+      fbDb.onChildAdded(q, snap => { const v = snap.val() || {}; onAdd(snap.key, v.c, v.t); });
+      fbDb.onChildRemoved(q, snap => onRemove(snap.key));
+    }
   };
 }
 
-function fmtTime(t) {
-  const d = new Date(t), now = new Date();
-  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  return d.toDateString() === now.toDateString()
-    ? time
-    : d.toLocaleDateString([], { month: "short", day: "numeric" }) + ", " + time;
+const chatNow = () => (chatBackend && chatBackend.now ? chatBackend.now() : Date.now());
+
+function ttlLabel(ms) {
+  const s = Math.round(ms / 1000);
+  return s % 60 === 0 ? `${s / 60} min` : `${s}s`;
 }
 
-function addMsg(m, t) {
+function showEmptyNote() {
+  const box = $("chatMsgs");
+  if (box.querySelector(".msg") || $("chatNote")) return;
+  const note = document.createElement("div");
+  note.className = "chat-note"; note.id = "chatNote";
+  note.textContent = `No messages right now. Anything you send disappears after ${ttlLabel(CHAT_TTL)}.`;
+  box.append(note);
+}
+
+function deleteFromDb(id, tries = 0) {
+  if (!chatBackend || !chatBackend.remove) return;
+  Promise.resolve(chatBackend.remove(id)).catch(() => {
+    // Clocks can be a second or two apart, so try again shortly
+    if (tries < 3) setTimeout(() => deleteFromDb(id, tries + 1), 3000);
+  });
+}
+
+function dropMsg(id) {
+  const m = liveMsgs.get(id);
+  if (!m) return;
+  m.el.remove();
+  liveMsgs.delete(id);
+  showEmptyNote();
+}
+
+function addMsg(id, m, t) {
   if (!m || typeof m.text !== "string" || !m.text.trim()) return;
-  if (typeof t !== "number") t = Date.now();
   const box = $("chatMsgs");
   const note = $("chatNote");
   if (note) note.remove();
@@ -798,19 +852,39 @@ function addMsg(m, t) {
   meta.className = "meta";
   const who = document.createElement("b");
   who.textContent = String(m.name || "Anon").slice(0, 24);
-  meta.append(who, document.createTextNode(fmtTime(t)));
+  const ttlEl = document.createElement("span");
+  ttlEl.className = "ttl";
+  meta.append(who, ttlEl);
   const bub = document.createElement("div");
   bub.className = "bub";
   bub.textContent = m.text.slice(0, 500);
   el.append(meta, bub);
 
   // Keep messages in time order even if they finish decrypting out of order
-  const after = [...box.children].find(c => Number(c.dataset.t) > t);
+  const after = [...box.querySelectorAll(".msg")].find(c => Number(c.dataset.t) > t);
   box.insertBefore(el, after || null);
+  liveMsgs.set(id, { el, t, ttlEl });
+  updateTimers();
 
   if (nearBottom || mine) box.scrollTop = box.scrollHeight;
   if (chatLoaded && !mine && !$("chatPanel").classList.contains("open")) $("chatFab").classList.add("unread");
 }
+
+function updateTimers() {
+  const now = chatNow();
+  for (const [id, m] of liveMsgs) {
+    const left = m.t + CHAT_TTL - now;
+    if (left <= 0) {
+      dropMsg(id);
+      deleteFromDb(id);
+      continue;
+    }
+    m.ttlEl.textContent = `${Math.ceil(left / 1000)}s`;
+    m.el.classList.toggle("fading", left < 5000);
+  }
+  if (!liveMsgs.size) $("chatFab").classList.remove("unread");
+}
+setInterval(updateTimers, 1000);
 
 function setChatMode() {
   const inp = $("chatInput"), btn = $("chatSend"), who = $("chatWho");
@@ -840,29 +914,57 @@ function setChatMode() {
 
 async function initChat(pw, cfg) {
   setChatMode();
-  const note = $("chatNote");
+  $("chatTtlNote").textContent = `Messages disappear after ${ttlLabel(CHAT_TTL)}`;
   if (!cfg && !window.__chatBackend) {
-    note.textContent = "Chat isn't set up yet.";
+    $("chatNote").textContent = "Chat isn't set up yet.";
     $("chatInput").disabled = $("chatSend").disabled = true;
     return;
   }
   try {
     chatKey = await chatKeyFrom(pw);
     chatBackend = window.__chatBackend || await firebaseBackend(cfg);
-    if ($("chatNote")) $("chatNote").textContent = "No messages yet. Say something.";
+    $("chatNote").remove();
+    showEmptyNote();
     chatReady = true;
-    chatBackend.subscribe(async (id, c, t) => {
-      if (seenMsgs.has(id) || typeof c !== "string") return;
-      seenMsgs.add(id);
-      let m;
-      try { m = await unseal(c); } catch (e) { return; } // not from someone with the password
-      addMsg(m, t);
-    });
+    chatBackend.subscribe(
+      async (id, c, t) => {
+        if (seenMsgs.has(id)) return;
+        seenMsgs.add(id);
+        if (typeof t !== "number") t = chatNow();
+        if (t + CHAT_TTL <= chatNow()) { deleteFromDb(id); return; } // already expired
+        if (typeof c !== "string") return;
+        let m;
+        try { m = await unseal(c); } catch (e) { return; } // not from someone with the password
+        if (t + CHAT_TTL <= chatNow()) return;
+        addMsg(id, m, t);
+      },
+      id => dropMsg(id)
+    );
     setTimeout(() => { chatLoaded = true; }, 2000);
   } catch (e) {
-    if ($("chatNote")) $("chatNote").textContent = "Couldn't connect to the chat. Try refreshing.";
+    const note = $("chatNote");
+    if (note) note.textContent = "Couldn't connect to the chat. Try refreshing.";
   }
 }
+
+/* ---------- Open, close, fullscreen ---------- */
+
+const ICON_EXPAND = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>`;
+const ICON_SHRINK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>`;
+
+function setFull(on) {
+  $("chatPanel").classList.toggle("full", on);
+  $("chatFull").innerHTML = on ? ICON_SHRINK : ICON_EXPAND;
+  $("chatFull").title = on ? "Exit full screen" : "Full screen";
+  try { localStorage.setItem(CHAT_FULL_KEY, on ? "1" : "0"); } catch (e) {}
+  const box = $("chatMsgs");
+  box.scrollTop = box.scrollHeight;
+}
+let startFull = false;
+try { startFull = localStorage.getItem(CHAT_FULL_KEY) === "1"; } catch (e) {}
+setFull(startFull);
+
+$("chatFull").addEventListener("click", () => setFull(!$("chatPanel").classList.contains("full")));
 
 $("chatFab").addEventListener("click", () => {
   $("chatPanel").classList.add("open");
@@ -873,6 +975,13 @@ $("chatFab").addEventListener("click", () => {
 });
 
 $("chatClose").addEventListener("click", () => $("chatPanel").classList.remove("open"));
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && $("chatPanel").classList.contains("open")) {
+    if ($("chatPanel").classList.contains("full")) setFull(false);
+    else $("chatPanel").classList.remove("open");
+  }
+});
 
 $("chatForm").addEventListener("submit", async e => {
   e.preventDefault();
