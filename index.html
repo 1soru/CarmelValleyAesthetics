@@ -318,6 +318,57 @@
     #chatFull { display: none; }
   }
 
+  /* Replies and photos */
+  body.locked .chat-lightbox { display: none !important; }
+  .msg-reply {
+    background: none; border: 0; color: var(--muted); font: inherit; font-size: 0.65rem;
+    cursor: pointer; padding: 0; margin-left: 8px;
+  }
+  .msg-reply:hover { color: var(--gold); }
+  .quote {
+    border-left: 2px solid var(--gold); background: rgba(255, 255, 255, 0.04);
+    padding: 4px 8px; border-radius: 6px; margin-bottom: 6px; font-size: 0.75rem; color: var(--muted);
+    cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px;
+  }
+  .quote b { color: var(--text); font-weight: 700; margin-right: 5px; }
+  .bub img {
+    display: block; max-width: min(240px, 100%); max-height: 320px;
+    border-radius: 8px; cursor: zoom-in;
+  }
+  .bub img + .txt { margin-top: 6px; }
+  .msg .bub { transition: box-shadow 0.3s; }
+  .msg.flash .bub { box-shadow: 0 0 0 2px var(--gold); }
+  .chat-extras { display: none; flex-direction: column; gap: 6px; padding: 10px 12px 0; border-top: 1px solid var(--line); }
+  .chat-extras.show { display: flex; }
+  .chat-extras.show + .chat-form { border-top: 0; }
+  .extra-row {
+    display: flex; align-items: center; gap: 8px; min-width: 0;
+    background: var(--card2); border: 1px solid var(--line); border-radius: 8px;
+    padding: 6px 8px; font-size: 0.75rem; color: var(--muted);
+  }
+  .extra-row b { color: var(--text); font-weight: 700; }
+  .extra-row .snip { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .extra-row img { width: 38px; height: 38px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+  .extra-x { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 2px; display: grid; flex-shrink: 0; }
+  .extra-x:hover { color: var(--text); }
+  .extra-x svg { width: 15px; height: 15px; }
+  .chat-form .chat-attach {
+    background: var(--card2); border: 1px solid var(--line); color: var(--muted);
+    width: 42px; padding: 0; display: grid; place-items: center; flex-shrink: 0;
+  }
+  .chat-form .chat-attach:hover:not(:disabled) { color: var(--text); }
+  .chat-attach svg { width: 19px; height: 19px; }
+  .chat-panel.full .chat-extras {
+    padding-left: max(16px, calc((100% - 760px) / 2));
+    padding-right: max(16px, calc((100% - 760px) / 2));
+  }
+  .chat-lightbox {
+    position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, 0.92);
+    display: none; place-items: center; padding: 16px; cursor: zoom-out;
+  }
+  .chat-lightbox.show { display: grid; }
+  .chat-lightbox img { max-width: 100%; max-height: 100%; border-radius: 6px; }
+
   /* ---------- Lock screen ---------- */
   body.locked nav, body.locked main { display: none; }
   .lock {
@@ -483,11 +534,18 @@
     </div>
   </div>
   <div class="chat-msgs" id="chatMsgs"><div class="chat-note" id="chatNote">Loading chat...</div></div>
+  <div class="chat-extras" id="chatExtras"></div>
   <form class="chat-form" id="chatForm" autocomplete="off">
+    <button class="chat-attach" id="chatAttach" type="button" aria-label="Add photo" title="Add photo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg>
+    </button>
+    <input id="chatFile" type="file" accept="image/*" hidden>
     <input id="chatInput" type="text">
     <button id="chatSend" type="submit">Send</button>
   </form>
 </div>
+
+<div class="chat-lightbox" id="chatLightbox"><img alt=""></div>
 
 <script>
 /* ============================================================
@@ -508,7 +566,7 @@ const SITE = {
 };
 
 // Encrypted rankings and news. Only the right password can unlock this.
-const ENC = "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";
+const ENC = "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";
 
 /* ============================================================
    Lock screen
@@ -738,18 +796,22 @@ function render(DATA) {
 }
 
 /* ============================================================
-   Members chat. Messages are encrypted with the site password
-   before they leave the browser, and each one deletes itself
-   CHAT_TTL after it was sent.
+   Members chat. Messages (and photos) are encrypted with the
+   site password before they leave the browser, and each one
+   deletes itself CHAT_TTL after it was sent.
    ============================================================ */
 
 // How long a message lasts. If you change this, change the 60000 in the database rules too.
 const CHAT_TTL = window.__chatTTL || 60 * 1000;
+const IMG_MAX_SIDE = 1024;          // photos are shrunk to this many pixels on the long side
+const IMG_MAX_BYTES = 300 * 1024;   // and squeezed under this size
 
 const CHAT_NAME_KEY = "cvar-chat-name";
 const CHAT_ID_KEY = "cvar-chat-id";
 const CHAT_FULL_KEY = "cvar-chat-full";
 let chatKey = null, chatBackend = null, chatName = null, chatReady = false, chatLoaded = false, lastSend = 0;
+let replyTo = null;    // { id, name, text }
+let pendingImg = null; // data URL of a photo waiting to be sent
 const seenMsgs = new Set();
 const liveMsgs = new Map(); // id -> { el, t, ttlEl }
 
@@ -761,7 +823,11 @@ if (!myId) {
 }
 try { chatName = localStorage.getItem(CHAT_NAME_KEY); } catch (e) {}
 
-function toB64(bytes) { let s = ""; bytes.forEach(b => s += String.fromCharCode(b)); return btoa(s); }
+function toB64(bytes) {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
 function fromB64(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
 
 async function chatKeyFrom(pw) {
@@ -813,6 +879,127 @@ function ttlLabel(ms) {
   return s % 60 === 0 ? `${s / 60} min` : `${s}s`;
 }
 
+function safeImg(s) {
+  return typeof s === "string" && /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(s) ? s : null;
+}
+
+/* ---------- Photos ---------- */
+
+async function compressImage(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = rej;
+      i.src = url;
+    });
+    const scale = Math.min(1, IMG_MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+    let w = Math.max(1, Math.round(img.naturalWidth * scale));
+    let h = Math.max(1, Math.round(img.naturalHeight * scale));
+    let q = 0.8;
+    const canvas = document.createElement("canvas");
+    for (let tries = 0; tries < 10; tries++) {
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      const data = canvas.toDataURL("image/jpeg", q);
+      if ((data.length - 23) * 0.75 <= IMG_MAX_BYTES) return data;
+      if (q > 0.5) q -= 0.1;
+      else { w = Math.round(w * 0.8); h = Math.round(h * 0.8); }
+    }
+    throw new Error("too big");
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function attachFile(file) {
+  if (!file || !file.type.startsWith("image/")) return;
+  if (!chatName) { $("chatInput").focus(); return; }
+  const inp = $("chatInput");
+  const before = inp.placeholder;
+  inp.placeholder = "Loading photo...";
+  try {
+    pendingImg = await compressImage(file);
+    inp.placeholder = before;
+    renderExtras();
+    inp.focus();
+  } catch (e) {
+    inp.placeholder = "Couldn't use that photo. Try another.";
+  }
+}
+
+function openLightbox(src, id) {
+  const lb = $("chatLightbox");
+  lb.querySelector("img").src = src;
+  lb.dataset.id = id || "";
+  lb.classList.add("show");
+}
+function closeLightbox() {
+  const lb = $("chatLightbox");
+  lb.classList.remove("show");
+  lb.querySelector("img").removeAttribute("src");
+  lb.dataset.id = "";
+}
+
+/* ---------- Reply bar and photo preview above the input ---------- */
+
+function renderExtras() {
+  const box = $("chatExtras");
+  box.textContent = "";
+  const closeBtn = onClick => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "extra-x"; b.setAttribute("aria-label", "Remove");
+    b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg>`;
+    b.onclick = onClick;
+    return b;
+  };
+  if (replyTo) {
+    const row = document.createElement("div");
+    row.className = "extra-row";
+    const label = document.createElement("span");
+    label.className = "snip";
+    const b = document.createElement("b");
+    b.textContent = "Replying to " + replyTo.name;
+    label.append(b, " " + replyTo.text);
+    row.append(label, closeBtn(() => { replyTo = null; renderExtras(); }));
+    box.append(row);
+  }
+  if (pendingImg) {
+    const row = document.createElement("div");
+    row.className = "extra-row";
+    const im = document.createElement("img");
+    im.src = pendingImg; im.alt = "";
+    const label = document.createElement("span");
+    label.className = "snip";
+    label.textContent = "Photo ready to send";
+    row.append(im, label, closeBtn(() => { pendingImg = null; renderExtras(); }));
+    box.append(row);
+  }
+  box.classList.toggle("show", !!(replyTo || pendingImg));
+}
+
+function startReply(id, m) {
+  if (!chatName) { $("chatInput").focus(); return; }
+  const text = typeof m.text === "string" && m.text.trim() ? m.text.trim() : "Photo";
+  replyTo = { id, name: String(m.name || "Anon").slice(0, 24), text: text.slice(0, 80) };
+  renderExtras();
+  $("chatInput").focus();
+}
+
+function jumpTo(id) {
+  const m = liveMsgs.get(id);
+  if (!m) return;
+  m.el.scrollIntoView({ block: "center", behavior: "smooth" });
+  m.el.classList.add("flash");
+  setTimeout(() => m.el.classList.remove("flash"), 1400);
+}
+
+/* ---------- Messages ---------- */
+
 function showEmptyNote() {
   const box = $("chatMsgs");
   if (box.querySelector(".msg") || $("chatNote")) return;
@@ -835,11 +1022,17 @@ function dropMsg(id) {
   if (!m) return;
   m.el.remove();
   liveMsgs.delete(id);
+  if ($("chatLightbox").dataset.id === id) closeLightbox();
+  if (replyTo && replyTo.id === id) { /* keep the reply; the quote carries its own text */ }
   showEmptyNote();
 }
 
 function addMsg(id, m, t) {
-  if (!m || typeof m.text !== "string" || !m.text.trim()) return;
+  if (!m || typeof m !== "object") return;
+  const text = typeof m.text === "string" ? m.text.slice(0, 500) : "";
+  const img = safeImg(m.img);
+  if (!text.trim() && !img) return;
+
   const box = $("chatMsgs");
   const note = $("chatNote");
   if (note) note.remove();
@@ -849,16 +1042,43 @@ function addMsg(id, m, t) {
   const el = document.createElement("div");
   el.className = "msg" + (mine ? " me" : "");
   el.dataset.t = t;
+
   const meta = document.createElement("div");
   meta.className = "meta";
   const who = document.createElement("b");
   who.textContent = String(m.name || "Anon").slice(0, 24);
   const ttlEl = document.createElement("span");
   ttlEl.className = "ttl";
-  meta.append(who, ttlEl);
+  const rep = document.createElement("button");
+  rep.type = "button"; rep.className = "msg-reply"; rep.textContent = "Reply";
+  rep.onclick = () => startReply(id, m);
+  meta.append(who, ttlEl, rep);
+
   const bub = document.createElement("div");
   bub.className = "bub";
-  bub.textContent = m.text.slice(0, 500);
+  const r = m.reply;
+  if (r && typeof r === "object" && typeof r.name === "string" && typeof r.text === "string") {
+    const q = document.createElement("div");
+    q.className = "quote";
+    const qb = document.createElement("b");
+    qb.textContent = r.name.slice(0, 24);
+    q.append(qb, r.text.slice(0, 80));
+    if (typeof r.id === "string") q.onclick = () => jumpTo(r.id);
+    bub.append(q);
+  }
+  if (img) {
+    const im = document.createElement("img");
+    im.src = img; im.alt = "Photo"; im.loading = "lazy";
+    im.onclick = () => openLightbox(img, id);
+    im.onload = () => { if (nearBottom || mine) box.scrollTop = box.scrollHeight; };
+    bub.append(im);
+  }
+  if (text.trim()) {
+    const tx = document.createElement("div");
+    tx.className = "txt";
+    tx.textContent = text;
+    bub.append(tx);
+  }
   el.append(meta, bub);
 
   // Keep messages in time order even if they finish decrypting out of order
@@ -890,6 +1110,7 @@ setInterval(updateTimers, 1000);
 function setChatMode() {
   const inp = $("chatInput"), btn = $("chatSend"), who = $("chatWho");
   who.textContent = "";
+  $("chatAttach").disabled = !chatName;
   if (chatName) {
     inp.placeholder = "Message";
     inp.maxLength = 500;
@@ -901,6 +1122,7 @@ function setChatMode() {
     change.onclick = () => {
       chatName = null;
       try { localStorage.removeItem(CHAT_NAME_KEY); } catch (e) {}
+      replyTo = null; pendingImg = null; renderExtras();
       setChatMode();
       inp.focus();
     };
@@ -918,7 +1140,7 @@ async function initChat(pw, cfg) {
   $("chatTtlNote").textContent = `Messages disappear after ${ttlLabel(CHAT_TTL)}`;
   if (!cfg && !window.__chatBackend) {
     $("chatNote").textContent = "Chat isn't set up yet.";
-    $("chatInput").disabled = $("chatSend").disabled = true;
+    $("chatInput").disabled = $("chatSend").disabled = $("chatAttach").disabled = true;
     return;
   }
   try {
@@ -976,21 +1198,41 @@ $("chatFab").addEventListener("click", () => {
 });
 
 $("chatClose").addEventListener("click", () => $("chatPanel").classList.remove("open"));
+$("chatLightbox").addEventListener("click", closeLightbox);
+
+$("chatAttach").addEventListener("click", () => $("chatFile").click());
+$("chatFile").addEventListener("change", e => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = "";
+  attachFile(f);
+});
+$("chatInput").addEventListener("paste", e => {
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  for (const it of items) {
+    if (it.type && it.type.startsWith("image/")) {
+      e.preventDefault();
+      attachFile(it.getAsFile());
+      return;
+    }
+  }
+});
 
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape" && $("chatPanel").classList.contains("open")) {
-    if ($("chatPanel").classList.contains("full")) setFull(false);
-    else $("chatPanel").classList.remove("open");
-  }
+  if (e.key !== "Escape") return;
+  if ($("chatLightbox").classList.contains("show")) return closeLightbox();
+  if (!$("chatPanel").classList.contains("open")) return;
+  if (replyTo || pendingImg) { replyTo = null; pendingImg = null; return renderExtras(); }
+  if ($("chatPanel").classList.contains("full")) setFull(false);
+  else $("chatPanel").classList.remove("open");
 });
 
 $("chatForm").addEventListener("submit", async e => {
   e.preventDefault();
   const inp = $("chatInput");
   const v = inp.value.trim();
-  if (!v) return;
 
   if (!chatName) {
+    if (!v) return;
     chatName = v.slice(0, 24);
     try { localStorage.setItem(CHAT_NAME_KEY, chatName); } catch (e) {}
     inp.value = "";
@@ -999,15 +1241,27 @@ $("chatForm").addEventListener("submit", async e => {
     return;
   }
 
+  if (!v && !pendingImg) return;
   if (!chatReady || Date.now() - lastSend < 1000) return;
   lastSend = Date.now();
-  inp.value = "";
+
+  const payload = { name: chatName, id: myId, text: v.slice(0, 500) };
+  if (pendingImg) payload.img = pendingImg;
+  if (replyTo) payload.reply = replyTo;
+  const saved = { v, img: pendingImg, reply: replyTo };
+
+  inp.value = ""; pendingImg = null; replyTo = null; renderExtras();
+  const btn = $("chatSend");
+  btn.disabled = true;
+  if (payload.img) btn.textContent = "Sending...";
   try {
-    await chatBackend.send(await seal({ name: chatName, id: myId, text: v.slice(0, 500) }));
+    await chatBackend.send(await seal(payload));
   } catch (err) {
-    inp.value = v;
+    inp.value = saved.v; pendingImg = saved.img; replyTo = saved.reply; renderExtras();
     inp.placeholder = "Couldn't send. Try again.";
   }
+  btn.disabled = false;
+  btn.textContent = "Send";
   inp.focus();
 });
 </script>
